@@ -7,7 +7,7 @@ var autofanPort = 3000;
 var autofanStateVar = 0;
 
 app.get( '/state', function(req,res) {
-    res.send('{"state":"'+ autofanStateVar +'"}');
+    res.send({ state: autofanStateVar });
 });
 
 app.listen(autofanPort, function() {
