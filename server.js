@@ -32,7 +32,7 @@ app.post( '/action', function(req,res) {
 	    autofanStateVar = 0;
     }
 
-    res.send('{"state":"'+ autofanStateVar +'"}');
+    res.send({ state: autofanStateVar });
 });
 	
 app.listen(autofanPort, function() {
