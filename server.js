@@ -22,20 +22,23 @@ app.post( '/action', function(req,res) {
     var reqAction = req.body.action;
     console.log(reqAction); //debug
 
+    switch( reqAction ) {
     // ON action - Master switch; other commands active only after issuing this command
-    if( reqAction == "ON" ) {
+    case "ON": {
 	if( !autofanStateVar ) {
 	    autofanStateVar = 1;
 	    autofanStateVarPrev = 0;
 	}
     }
+	break;
     // OFF action - Ends the autofan session
-    else if( reqAction == "OFF" ) {
+    case "OFF": {
 	autofanStateVar = 0;
 	autofanStateVarPrev = 0;
     }
+	break;
     // TOGGLE action - When autofan is active, it toggles autofan from off  to last state
-    else if( reqAction == "TOGGLE" ) {
+    case "TOGGLE": {
 	var stateCache = autofanStateVar;
 	if( autofanStateVar ) {
 	    autofanStateVar = 0;
@@ -48,23 +51,26 @@ app.post( '/action', function(req,res) {
 	    }
 	}
     }
+	break;
     // UP action - When autofan active, ups the speed by one unit
-    else if( reqAction == "UP" ) {
+    case "UP": {
 	var stateCache = autofanStateVar;
 	if( (autofanStateVar) && (autofanStateVar < autofanStateMax) )
 	    autofanStateVar += 1;
 	autofanStateVarPrev = stateCache;
     }
+	break;
     // DOWN action - When autofan active, downs the speed by one unit
-    else if( reqAction == "DOWN" ) {
+    case "DOWN": {
 	if( autofanStateVar > 1 ) {
 	    var stateCache = autofanStateVar;
 	    autofanStateVar -= 1;
 	    autofanStateVarPrev = stateCache;
 	}
     }
+	break;
     // SHIFT action (requires "state" field in POST data) - When autofan active, shifts the speed to the state provided
-    else if( reqAction == "SHIFT" ) {
+    case "SHIFT": {
 	var toState = req.body.state;
 	if((autofanStateVar)
 	   && (toState)
@@ -76,6 +82,8 @@ app.post( '/action', function(req,res) {
 	    autofanStateVar = toState;
 	    autofanStateVarPrev = stateCache;
 	}
+    }
+	break;
     }
     
     res.send({ state: autofanStateVar });
