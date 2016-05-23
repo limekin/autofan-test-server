@@ -1,9 +1,22 @@
 var express = require('express');
-var dgram = require('dgram');
 
 var app = express();
 
 var autofanPort = 3000;
+
+var autofanStateVar = 0;
+
+app.get( '/state', function(req,res) {
+    res.send({ state: autofanStateVar });
+});
+
+app.listen(autofanPort, function() {
+    console.log('Listening on port '+ autofanPort +'.');
+});
+
+// Service Discovery code
+var dgram = require('dgram');
+
 var autofanDiscoverPort = 3001;
 
 var broadcastListener = dgram.createSocket('udp4');
@@ -31,13 +44,3 @@ broadcastListener.on('message', function (message, remote) {
 });
 
 broadcastListener.bind(autofanDiscoverPort, '');
-
-var autofanStateVar = 0;
-
-app.get( '/state', function(req,res) {
-    res.send({ state: autofanStateVar });
-});
-
-app.listen(autofanPort, function() {
-    console.log('Listening on port '+ autofanPort +'.');
-});
