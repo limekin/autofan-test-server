@@ -121,7 +121,7 @@ broadcastListener.on('message', function (message, remote) {
 
     // Selectively respond to the sender's port with the autofan port
     if( message=="AFDCRQ" ) {
-	var message = new Buffer(String(autofanPort));
+	var message = new Buffer(JSON.stringify({port: autofanPort, id: metaObj.id, label: metaObj.label}));
 
 	var udpResponder = dgram.createSocket('udp4');
 	udpResponder.send(message, 0, message.length, remote.port, remote.address, function(err, bytes) {
