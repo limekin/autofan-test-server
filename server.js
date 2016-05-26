@@ -116,11 +116,13 @@ broadcastListener.on('listening', function () {
     console.log('UDP Server listening on ' + address.address + ":" + address.port);
 });
 
+var assistedConnect = 0;
+
 broadcastListener.on('message', function (message, remote) {
     console.log(remote.address + ':' + remote.port +' - ' + message);
 
     // Selectively respond to the sender's port with the autofan port
-    if( message=="AFDCRQ" ) {
+    if( message=="AFDCRQ" || (message=="AFACRQ" && assistedConnect) ) {
 	var message = new Buffer(JSON.stringify({port: autofanPort, id: metaObj.id, label: metaObj.label}));
 
 	var udpResponder = dgram.createSocket('udp4');
@@ -134,3 +136,14 @@ broadcastListener.on('message', function (message, remote) {
 });
 
 broadcastListener.bind(autofanDiscoverPort, '');
+
+process.stdin.setEncoding('utf8');
+
+process.stdin.on('readable', function() {
+  var chunk = process.stdin.read();
+  if (chunk !== null) {
+      assistedConnect = 1;
+      setTimeout(function () { assistedConnect = 0; console.log('Assisted Connect disabled!');}, 3000);
+      console.log('Assisted Connect enabled!');
+  }
+});
