@@ -1,3 +1,10 @@
+var fs = require("fs");
+var content = fs.readFileSync("data/meta.json");
+console.log("Output Meta Content:\n"+ content);
+
+// store meta content as JSON object
+var metaObj = JSON.parse(content);
+
 var express = require('express');
 var bodyParser = require('body-parser');
 
@@ -10,7 +17,11 @@ var autofanPort = 3000;
 
 var autofanStateVar = 0;
 var autofanStateVarPrev = 0;
-var autofanStateMax = 5;
+var autofanStateMax = metaObj.properties.speed;
+
+app.get('/meta', function(req,res) {
+    res.send(metaObj.properties);
+});    
 
 app.get( '/state', function(req,res) {
     res.send({ state: autofanStateVar });
