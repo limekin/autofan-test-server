@@ -17,11 +17,11 @@ var autofanPort = 3000;
 
 var autofanStateVar = 0;
 var autofanStateVarPrev = 0;
-var autofanStateMax = metaObj.properties.speed;
+var autofanStateMax = metaObj.properties.speeds;
 
 app.get('/meta', function(req,res) {
     res.send(metaObj.properties);
-});    
+});
 
 app.get( '/state', function(req,res) {
     res.send({ state: autofanStateVar });
@@ -96,10 +96,10 @@ app.post( '/action', function(req,res) {
     }
 	break;
     }
-    
+
     res.send({ state: autofanStateVar });
 });
-	
+
 app.listen(autofanPort, function() {
     console.log('Listening on port '+ autofanPort +'.');
 });
