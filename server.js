@@ -27,11 +27,29 @@ var token_validator = function(req, res, next) {
             next(); return;
     }
 
+    var TOKEN_INVALID = 1, TOKEN_NOTFOUND = 2, TOKEN_EXPIRED = 3;
+
+    // Rejector.
+    var reject = function(code) {
+            var message = "";
+            switch(code) {
+                    case TOKEN_NOTFOUND:
+                        message = "Bad authentication details";
+                        break;
+                    case TOKEN_EXPIRED:
+                        message = "Your token has been expired. Please authenitcate again.";
+                        break;
+                    case TOKEN_INVALID:
+                        message = "Invalid token.";
+            }
+            res.status(401).send({
+                    error: message
+            });
+    };
+
     // Get token from either query param or post data.
     var token = req.body.token || req.query.token;
-    if(! token) res.status(401).send({
-            error: 'Bad authentication details.'
-    });
+    if(! token) { reject(TOKEN_NOTFOUND); return; }
 
     // Okay we have a token. Lets get the clients first.
     var clients = JSON.parse( fs.readFileSync("data/clients.js") );
@@ -40,19 +58,16 @@ var token_validator = function(req, res, next) {
             if(client.token == token) {
                    // If the difference is more than 1 day, token expired.
                    if(Date.now() - client.token_expiry > 24*60*60) {
-                           res.status(401).send({
-                                error: 'Your token has been expired, please authenticate again.'
-                           }); return;
+                           reject(TOKEN_EXPIRED); return;
                    } else {
+                   // It's a valid request.
                            next(); return;
                    }
             }
     }
 
-    // Token stranger.
-    res.status(401).send({
-            error: 'Invalid token'
-    });
+    // Token not found.
+    reject(TOKEN_INVALID);
 };
 
 app.use(token_validator);
