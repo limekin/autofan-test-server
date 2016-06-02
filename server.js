@@ -19,6 +19,44 @@ var autofanStateVar = 0;
 var autofanStateVarPrev = 0;
 var autofanStateMax = metaObj.properties.speeds;
 
+// Middleware used to protect routes by checking for valid tokens.
+var token_validator = function(req, res, next) {
+    // We dont have to validate tokens for these paths.
+    var excludedPaths = ['/auth', '/meta'];
+    if(excludedPaths.indexOf(req.path) != -1) {
+            next(); return;
+    }
+
+    // Get token from either query param or post data.
+    var token = req.body.token || req.query.token;
+    if(! token) res.status(401).send({
+            error: 'Bad authentication details.'
+    });
+
+    // Okay we have a token. Lets get the clients first.
+    var clients = JSON.parse( fs.readFileSync("data/clients.js") );
+    for(var i=0; i<clients.length; ++i) {
+            var client = clients[i];
+            if(client.token == token) {
+                   // If the difference is more than 1 day, token expired.
+                   if(Date.now() - client.token_expiry > 24*60*60) {
+                           res.status(401).send({
+                                error: 'Your token has been expired, please authenticate again.'
+                           }); return;
+                   } else {
+                           next(); return;
+                   }
+            }
+    }
+
+    // Token stranger.
+    res.status(401).send({
+            error: 'Invalid token'
+    });
+};
+
+app.use(token_validator);
+
 app.get('/meta', function(req,res) {
     res.send(metaObj.properties);
 });
