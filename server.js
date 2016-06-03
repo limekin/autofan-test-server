@@ -1,4 +1,5 @@
 var fs = require("fs");
+var crypto = require("crypto");
 var content = fs.readFileSync("data/meta.json");
 console.log("Output Meta Content:\n"+ content);
 
@@ -18,11 +19,12 @@ var autofanPort = 3000;
 var autofanStateVar = 0;
 var autofanStateVarPrev = 0;
 var autofanStateMax = metaObj.properties.speeds;
+var autofanAuth = null;
 
 // Middleware used to protect routes by checking for valid tokens.
 var token_validator = function(req, res, next) {
     // We dont have to validate tokens for these paths.
-    var excludedPaths = ['/auth', '/meta'];
+    var excludedPaths = ['/auth', '/auth_verify', '/meta'];
     if(excludedPaths.indexOf(req.path) != -1) {
             next(); return;
     }
@@ -52,12 +54,12 @@ var token_validator = function(req, res, next) {
     if(! token) { reject(TOKEN_NOTFOUND); return; }
 
     // Okay we have a token. Lets get the clients first.
-    var clients = JSON.parse( fs.readFileSync("data/clients.js") );
+    var clients = JSON.parse( fs.readFileSync("data/clients.json") );
     for(var i=0; i<clients.length; ++i) {
             var client = clients[i];
             if(client.token == token) {
                    // If the difference is more than 1 day, token expired.
-                   if(Date.now() - client.token_expiry > 24*60*60) {
+                   if(Date.now() > client.token_expiry) {
                            reject(TOKEN_EXPIRED); return;
                    } else {
                    // It's a valid request.
@@ -71,6 +73,89 @@ var token_validator = function(req, res, next) {
 };
 
 app.use(token_validator);
+
+app.post('/auth', function(req, res) {
+        // Check if there is an active auth session.
+        if(autofanAuth) {
+                if(Date.now() < autofanAuth.pinExpiresAt) {
+                        res.status(503).send({
+                                error: 'This endpoint is unavailable right now.'
+                        }); return;
+                }
+        }
+
+        // Okay auth is ready to open. Get the client id.
+        var clientId = req.body.id || req.query.id;
+
+        // Generate pin.
+        var pin = (function() {
+                var ret = "";
+                for(var i=0; i<5; ++i) ret += String(Math.random()*10)[0];
+                return ret;
+        })();
+
+        // Create an auth session.
+        autofanAuth = {
+                clientId: clientId,
+                pin: pin,
+                sessionTimeout: 20*1000,
+                pinExpiresAt: Date.now() + 20*1000
+        };
+
+        console.log("Auth session started for: " + clientId);
+        setTimeout(function() {
+                console.log("Auth session expired for: " + clientId);
+        }, autofanAuth.sessionTimeout);
+
+        res.send({
+                pin: autofanAuth.pin,
+                sessionTimeout: autofanAuth.sessionTimeout
+        });
+});
+
+app.post('/auth_verify', function(req, res) {
+        // We need an active auth session (for the client) before verification.
+        var clientId = req.body.id || req.query.id
+        if(!autofanAuth || clientId != autofanAuth.clientId) {
+                res.status(503).send({ error: 'No active session found for you.'});
+                return;
+        }
+
+        // Okay there is an active auth session and the client owns it.
+        var pin = req.body.pin;
+        if(Date.now() > autofanAuth.pinExpiresAt) {
+                res.status(503).send({ error: 'Your auth session expired. Do again.'});
+                return;
+        } else if(pin != autofanAuth.pin) {
+                res.status(417).send({ error: 'Incorrect pin.'});
+                return;
+        }
+
+        // All fine now generate a token and send it back.
+        var token = crypto.randomBytes(32).toString('base64');
+        var tokenExpiresAt = Date.now() + 24*60*60*1000;
+
+        // We have to update the clients data now.
+        var clients = JSON.parse(fs.readFileSync('data/clients.json'));
+        var existingClient = clients.find(function(client){
+                return client.id == clientId;
+        });
+        if(existingClient) {
+                existingClient.token = token;
+                existingClient.token_expiry = tokenExpiresAt;
+        } else {
+                clients.push({
+                        id: clientId,
+                        token: token,
+                        token_expiry: tokenExpiresAt
+                });
+        }
+        fs.writeFileSync('data/clients.json', JSON.stringify(clients));
+
+        res.send({
+                token: token
+        });
+})
 
 app.get('/meta', function(req,res) {
     res.send(metaObj.properties);
