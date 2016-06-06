@@ -108,7 +108,6 @@ app.post('/auth', function(req, res) {
         }, autofanAuth.sessionTimeout);
 
         res.send({
-                pin: autofanAuth.pin,
                 sessionTimeout: autofanAuth.sessionTimeout
         });
 });
