@@ -159,10 +159,14 @@ app.post('/auth_verify', function(req, res) {
         }
         fs.writeFileSync('data/clients.json', JSON.stringify(clients));
 
+        // Clear the auth session now, so others dont have to wait
+        // until the session timeout.
+        autofanAuth = null;
+
         res.send({
                 token: token
         });
-})
+});
 
 app.get('/meta', function(req,res) {
     res.send(metaObj.properties);
