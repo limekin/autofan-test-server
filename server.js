@@ -99,7 +99,8 @@ app.post('/auth', function(req, res) {
                 clientId: clientId,
                 pin: pin,
                 sessionTimeout: 20*1000,
-                pinExpiresAt: Date.now() + 20*1000
+                pinExpiresAt: Date.now() + 20*1000,
+                token: crypto.randomBytes(32).toString('base64')
         };
 
         console.log("Auth session started for: " + clientId);
@@ -108,7 +109,8 @@ app.post('/auth', function(req, res) {
         }, autofanAuth.sessionTimeout);
 
         res.send({
-                sessionTimeout: autofanAuth.sessionTimeout
+                sessionTimeout: autofanAuth.sessionTimeout,
+                authToken: autofanAuth.token
         });
 });
 
@@ -119,7 +121,12 @@ app.post('/auth_verify', function(req, res) {
                 res.status(503).send({ error: 'No active session found for you.'});
                 return;
         }
-
+        // Now verify that client is indeed the client we knew.
+        var authToken = req.body.auth_token || req.query.auth_token;
+        if(authToken != autofanAuth.token) {
+            res.status(401).send({ error: 'Invalid authorization token.'});
+            return;
+        }
         // Okay there is an active auth session and the client owns it.
         var pin = req.body.pin;
         if(Date.now() > autofanAuth.pinExpiresAt) {
@@ -129,6 +136,7 @@ app.post('/auth_verify', function(req, res) {
                 res.status(417).send({ error: 'Incorrect pin.'});
                 return;
         }
+
 
         // All fine now generate a token and send it back.
         var token = crypto.randomBytes(32).toString('base64');
